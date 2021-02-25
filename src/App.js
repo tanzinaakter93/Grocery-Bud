@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, PureComponent } from 'react';
+import jsPDF from 'jspdf';
+import "jspdf-autotable";
 import List from './List';
 import Alert from './Alert';
 const getLocalStorage = () => {
@@ -11,6 +13,7 @@ const getLocalStorage = () => {
 };
 function App() {
   const [name, setName] = useState('');
+  const [quantity, setQuantity] = useState('');
   const [list, setList] = useState(getLocalStorage());
   const [isEditing, setIsEditing] = useState(false);
   const [editID, setEditID] = useState(null);
@@ -23,21 +26,23 @@ function App() {
       setList(
         list.map((item) => {
           if (item.id === editID) {
-            return { ...item, title: name };
+            return { ...item, title: name, amount: quantity };
           }
           return item;
         })
       );
       setName('');
+      setQuantity('');
       setEditID(null);
       setIsEditing(false);
       showAlert(true, 'success', 'value changed');
     } else {
       showAlert(true, 'success', 'item added to the list');
-      const newItem = { id: new Date().getTime().toString(), title: name };
+      const newItem = { id: new Date().getTime().toString(), title: name, amount: quantity };
 
       setList([...list, newItem]);
       setName('');
+      setQuantity('');
     }
   };
 
@@ -57,6 +62,27 @@ function App() {
     setIsEditing(true);
     setEditID(id);
     setName(specificItem.title);
+    setQuantity(specificItem.amount);
+  };
+  const generatePdf=()=>{
+    var doc= new jsPDF('p','pt');
+    const tableColumn = ["Items", "Amount"];
+    const tableRows = [];
+
+    list.forEach(list => {
+    const listData = [
+      list.title,
+      list.amount,
+      // called date-fns to format the date on the ticket
+    ];
+    // push each tickcet's info into a row
+    tableRows.push(listData);
+  });
+  doc.autoTable(tableColumn, tableRows, { startY: 20 });
+  doc.text("grocery list", 14, 15);
+    doc.setFont('courier');
+   // doc.setFontType('normal');
+    doc.save('grocerylist.pdf');
   };
   useEffect(() => {
     localStorage.setItem('list', JSON.stringify(list));
@@ -75,6 +101,13 @@ function App() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+           <input
+            type='text'
+            className='grocery'
+            placeholder='quantity'
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+          />
           <button type='submit' className='submit-btn'>
             {isEditing ? 'edit' : 'submit'}
           </button>
@@ -85,6 +118,9 @@ function App() {
           <List items={list} removeItem={removeItem} editItem={editItem} />
           <button className='clear-btn' onClick={clearList}>
             clear items
+          </button>
+          <button className='clear-btn' onClick={generatePdf}>
+            generate pdf
           </button>
         </div>
       )}
